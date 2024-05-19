@@ -8,3 +8,40 @@
 
   <%= button_to "Destroy this post", @post, method: :delete %>
 </div>
+
+<hr>
+
+Audits: <%= @post.audits.count %>
+
+<% if params[:split] == "true" %>
+  <%= link_to 'Column view', post_path(@post) %>
+<% else %>
+  <%= link_to 'Split view', post_path(@post, split: true) %>
+<% end %>
+
+<% @post.audits.sort_by(&:version).reverse.each do |audit| %>
+  <div style="border: 1px solid black; padding: 10px">
+    <%= audit.action %>
+    <%= audit.version %>
+    <%= audit.created_at %>
+
+    <% audit.audited_changes.each do |attribute, changes| %>
+      <div>
+        <b><%= attribute %></b>
+          <% if changes.is_a? Array %>
+            <% if params[:split] %>
+              <div style="display: flex">
+                <%= Diffy::SplitDiff.new(changes[0], changes[1], format: :html).left.html_safe %>
+                <%= Diffy::SplitDiff.new(changes[0], changes[1], format: :html).right.html_safe %>
+              </div>
+            <% else %>
+              <%= Diffy::Diff.new(changes[0], changes[1], include_plus_and_minus_in_html: true, include_diff_info: true).to_s(:html).html_safe %>
+            <% end %>
+          <% elsif changes.is_a? String %>
+            <%= Diffy::Diff.new("", changes, include_plus_and_minus_in_html: true).to_s(:html).html_safe %>
+          <% end %>
+      </div>
+    <% end %>
+
+  </div>
+<% end %>
